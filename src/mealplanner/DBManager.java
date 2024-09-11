@@ -3,15 +3,12 @@ package mealplanner;
 import java.util.*;
 import java.sql.*;
 
-import static mealplanner.Main.meals;
-
 public class DBManager {
     private final Connection conn;
 
     public DBManager() throws SQLException {
         this.conn = connectToDB();
         this.createTables();
-        this.getExistingMeals();
     }
 
     private Connection connectToDB() throws SQLException {
@@ -40,46 +37,19 @@ public class DBManager {
         statement.close();
     }
 
-    private void getExistingMeals() throws SQLException {
+    public int getNextId() throws SQLException {
+        int id;
         Statement statement = this.conn.createStatement();
-        ResultSet dbMeals = statement.executeQuery("SELECT * FROM public.meals");
-
-        // Get all meal category + names first
-        while (dbMeals.next()) {
-            String category = dbMeals.getString("category");
-            String name = dbMeals.getString("meal");
-
-            Meal meal = new Meal(category, name);
-            meals.addMeal(meal);
-        }
-        dbMeals.close();
-
-        // Next match the ingredients to the right meal using id
-        ArrayList<String> ingredients = new ArrayList<>();
-        int prevId = 0;
-        ResultSet dbIngredients = statement.executeQuery("SELECT * FROM public.ingredients ORDER BY meal_id");
-        while (dbIngredients.next()) {
-            String ingredient = dbIngredients.getString("ingredient");
-            int currentId = dbIngredients.getInt("meal_id");
-
-            if ((currentId != prevId && prevId != 0) || dbIngredients.isLast()) {
-                if (!dbIngredients.isLast()) {
-                    meals.getMealFromId(prevId).setIngredients(ingredients);
-                    ingredients = new ArrayList<>();
-                } else {
-                    ingredients.add(ingredient);
-                    meals.getMealFromId(prevId).setIngredients(ingredients);
-                    break;
-                }
-            }
-
-            ingredients.add(ingredient);
-            prevId = currentId;
+        ResultSet ids = statement.executeQuery("SELECT COALESCE(MAX(meal_id), 0) + 1 FROM meals");
+        if (ids.next()) {
+            id = ids.getInt(1);
+        } else {
+            id = 1;
         }
 
-        dbIngredients.close();
         statement.close();
-
+        ids.close();
+        return id;
     }
 
     public void insertMeal(Meal meal) throws SQLException {
@@ -109,6 +79,44 @@ public class DBManager {
             ps.setObject(3, mealId);
 
             ps.executeUpdate();
+        }
+    }
+
+    public void showMeals() throws SQLException {
+        Statement statement = this.conn.createStatement();
+        ResultSet allMeals = statement.executeQuery("SELECT * FROM meals");
+        if (!allMeals.isBeforeFirst()) {
+            System.out.println("No meals saved. Add a meal first.");
+            return;
+        }
+
+        ArrayList<Meal> tempMeals = new ArrayList<>();
+        while (allMeals.next()) {
+            String category = allMeals.getString("category");
+            String name = allMeals.getString("meal");
+            int id = allMeals.getInt("meal_id");
+
+            Meal meal = new Meal(category, name, id);
+            tempMeals.add(meal);
+
+            ArrayList<String> ingredients = new ArrayList<>();
+            Statement statement2 = this.conn.createStatement();
+            ResultSet rs = statement2.executeQuery("SELECT * FROM ingredients WHERE meal_id = " + id);
+
+            while (rs.next()) {
+                String ingredient = rs.getString("ingredient");
+                ingredients.add(ingredient);
+            }
+            meal.setIngredients(ingredients);
+            statement2.close();
+            rs.close();
+        }
+
+        allMeals.close();
+        statement.close();
+
+        for (Meal meal : tempMeals) {
+            meal.showMeal();
         }
     }
 

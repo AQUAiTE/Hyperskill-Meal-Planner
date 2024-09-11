@@ -4,7 +4,6 @@ import java.sql.SQLException;
 import java.util.*;
 
 public class Main {
-  public static Meals meals = new Meals();
   public static DBManager dbManager = null;
   public static Scanner scanner = new Scanner(System.in);
 
@@ -20,11 +19,7 @@ public class Main {
 
         switch (action) {
           case "show":
-            if (meals.size() == 0) {
-              System.out.println("No meals saved. Add a meal first.");
-            } else {
-              meals.showMeals();
-            }
+            showMeals();
             break;
           case "add":
             addMeal();
@@ -42,6 +37,15 @@ public class Main {
 
     scanner.close();
     System.out.println("Bye!");
+  }
+
+  private static void showMeals throws SQLException {
+    System.out.println("Which category do you want to print (breakfast, lunch, dinner)?");
+    String category = scanner.nextLine();
+    while (!isValidCategory(category)) {
+      System.out.println("Wrong meal category! Choose from: breakfast, lunch, dinner.");
+    }
+
   }
 
   private static void addMeal() throws SQLException {
@@ -66,8 +70,9 @@ public class Main {
       ingredients = getIngredients(scanner);
     }
 
-    Meal meal = new Meal(category, name, ingredients);
-    meals.addMeal(meal);
+
+    int id = dbManager.getNextId();
+    Meal meal = new Meal(category, name, id, ingredients);
     dbManager.insertMeal(meal);
     dbManager.insertIngredients(meal);
     System.out.println("The meal has been added!");

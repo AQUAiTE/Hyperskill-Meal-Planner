@@ -1,24 +1,24 @@
 package mealplanner;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 public class Meal {
-    public static int numMeals = 0;
     private int mealId;
     private String name;
     private String category;
     private ArrayList<String> ingredients;
 
-    public Meal(String category, String name) {
+    public Meal(String category, String name, int mealId) {
         this.category = category;
         this.name = name;
-
-        numMeals++;
-        this.mealId = numMeals;
+        this.mealId = mealId;
     }
 
-    public Meal(String category, String name, ArrayList<String> ingredients) {
-        this(category, name);
+    public Meal(String category, String name, int mealId, ArrayList<String> ingredients) {
+        this.category = category;
+        this.name = name;
+        this.mealId = mealId;
         this.ingredients = ingredients;
     }
 
