@@ -82,17 +82,19 @@ public class DBManager {
         }
     }
 
-    public void showMeals() throws SQLException {
-        Statement statement = this.conn.createStatement();
-        ResultSet allMeals = statement.executeQuery("SELECT * FROM meals");
+    public void showMeals(String category) throws SQLException {
+        String categorySelect = "SELECT * FROM meals WHERE category = ?";
+        PreparedStatement ps = this.conn.prepareStatement(categorySelect);
+        ps.setObject(1, category);
+        ResultSet allMeals = ps.executeQuery();
+
         if (!allMeals.isBeforeFirst()) {
-            System.out.println("No meals saved. Add a meal first.");
+            System.out.println("No meals found.");
             return;
         }
 
         ArrayList<Meal> tempMeals = new ArrayList<>();
         while (allMeals.next()) {
-            String category = allMeals.getString("category");
             String name = allMeals.getString("meal");
             int id = allMeals.getInt("meal_id");
 
@@ -113,8 +115,8 @@ public class DBManager {
         }
 
         allMeals.close();
-        statement.close();
 
+        System.out.println("Category: " + category);
         for (Meal meal : tempMeals) {
             meal.showMeal();
         }

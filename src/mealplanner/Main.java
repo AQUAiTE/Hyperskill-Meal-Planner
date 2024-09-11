@@ -39,13 +39,15 @@ public class Main {
     System.out.println("Bye!");
   }
 
-  private static void showMeals throws SQLException {
+  private static void showMeals() throws SQLException {
     System.out.println("Which category do you want to print (breakfast, lunch, dinner)?");
     String category = scanner.nextLine();
     while (!isValidCategory(category)) {
       System.out.println("Wrong meal category! Choose from: breakfast, lunch, dinner.");
+      category = scanner.nextLine();
     }
 
+    dbManager.showMeals(category);
   }
 
   private static void addMeal() throws SQLException {

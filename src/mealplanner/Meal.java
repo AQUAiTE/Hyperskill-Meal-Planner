@@ -43,7 +43,6 @@ public class Meal {
     }
 
     public void showMeal() {
-        System.out.println("Category: " + this.category);
         System.out.println("Name: " + this.name);
         System.out.println("Ingredients:");
         for (String ingredient : this.ingredients) {
