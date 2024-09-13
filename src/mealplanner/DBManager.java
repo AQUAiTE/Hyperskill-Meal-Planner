@@ -1,5 +1,6 @@
 package mealplanner;
 
+import javax.xml.transform.Result;
 import java.util.*;
 import java.sql.*;
 
@@ -21,17 +22,24 @@ public class DBManager {
 
     private void createTables() throws SQLException {
         Statement statement = this.conn.createStatement();
-        statement.executeUpdate("CREATE TABLE IF NOT EXISTS public.meals ("
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS meals ("
                 + "category VARCHAR(20),"
-                + "meal VARCHAR(30),"
+                + "meal VARCHAR(255),"
                 + "meal_id INTEGER PRIMARY KEY"
                 + ")");
 
-        statement.executeUpdate("CREATE TABLE IF NOT EXISTS public.ingredients ("
-                + "ingredient VARCHAR(20),"
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS ingredients ("
+                + "ingredient VARCHAR(255),"
                 + "ingredient_id INTEGER,"
-                + "meal_id INTEGER REFERENCES public.meals,"
+                + "meal_id INTEGER REFERENCES meals,"
                 + "PRIMARY KEY (ingredient, ingredient_id, meal_id)"
+                + ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS plan ("
+                + "meal_option VARCHAR(20),"
+                + "meal_category VARCHAR(20),"
+                + "meal_id INTEGER REFERENCES meals,"
+                + "PRIMARY KEY (meal_option, meal_category)"
                 + ")");
 
         statement.close();
@@ -53,7 +61,7 @@ public class DBManager {
     }
 
     public void insertMeal(Meal meal) throws SQLException {
-        String insertQuery = "INSERT INTO public.meals (category, meal, meal_id) VALUES (?, ?, ?)";
+        String insertQuery = "INSERT INTO meals (category, meal, meal_id) VALUES (?, ?, ?)";
 
         String category = meal.getCategory();
         String name = meal.getName();
@@ -68,7 +76,7 @@ public class DBManager {
     }
 
     public void insertIngredients(Meal meal) throws SQLException {
-        String ingredientInsert = "INSERT INTO public.ingredients(ingredient, ingredient_id, meal_id) VALUES (?, ?, ?)";
+        String ingredientInsert = "INSERT INTO ingredients(ingredient, ingredient_id, meal_id) VALUES (?, ?, ?)";
         PreparedStatement ps = this.conn.prepareStatement(ingredientInsert);
         ArrayList<String> ingredients = meal.getIngredients();
         int mealId = meal.getMealId();
@@ -115,11 +123,89 @@ public class DBManager {
         }
 
         allMeals.close();
+        ps.close();
 
         System.out.println("Category: " + category);
         for (Meal meal : tempMeals) {
             meal.showMeal();
         }
+    }
+
+    public ArrayList<String> listMeals(String category) throws SQLException {
+        String categorySelect = "SELECT * FROM meals WHERE category = ? ORDER BY meal ASC";
+        PreparedStatement ps = this.conn.prepareStatement(categorySelect);
+        ps.setObject(1, category);
+        ResultSet allMeals = ps.executeQuery();
+
+        ArrayList<String> meals = new ArrayList<>();
+
+        if (!allMeals.isBeforeFirst()) {
+            System.out.println("No meals found.");
+            return meals;
+        }
+
+        while (allMeals.next()) {
+            String name = allMeals.getString("meal");
+            meals.add(name);
+            System.out.println(name);
+        }
+
+        allMeals.close();
+        ps.close();
+
+        return meals;
+    }
+
+    public void setPlanDay(String day, String category, String name) throws SQLException {
+        String mealFinder = "SELECT * FROM meals WHERE category = ? AND meal = ?";
+        PreparedStatement findMealId = this.conn.prepareStatement(mealFinder);
+        findMealId.setObject(1, category);
+        findMealId.setObject(2, name);
+
+        ResultSet allMeals = findMealId.executeQuery();
+        allMeals.next();
+        int id = allMeals.getInt("meal_id");
+
+        allMeals.close();
+        findMealId.close();
+
+        String insertToPlan = "INSERT INTO plan (meal_option, meal_category, meal_id) VALUES (?, ?, ?)";
+        PreparedStatement ps = this.conn.prepareStatement(insertToPlan);
+        ps.setObject(1, day);
+        ps.setObject(2, category);
+        ps.setObject(3, id);
+
+        ps.executeUpdate();
+    }
+
+    public void showPlan(String day) throws SQLException {
+        String planFinder = "SELECT * FROM plan WHERE meal_option = ?";
+        PreparedStatement ps = this.conn.prepareStatement(planFinder);
+        ps.setObject(1, day);
+        ResultSet dayMeals = ps.executeQuery();
+
+        System.out.println(day);
+        while (dayMeals.next()) {
+            String category = dayMeals.getString("meal_category");
+            int id = dayMeals.getInt("meal_id");
+
+            String matchMeal = "SELECT meal FROM meals WHERE meal_id = ? AND category = ?";
+            PreparedStatement matcher = this.conn.prepareStatement(matchMeal);
+            matcher.setObject(1, id);
+            matcher.setObject(2, category);
+
+            ResultSet foundMeal = matcher.executeQuery();
+            foundMeal.next();
+
+            System.out.printf("%s: %s\n", category, foundMeal.getString("meal"));
+
+            foundMeal.close();
+            matcher.close();
+        }
+
+        ps.close();
+        dayMeals.close();
+        System.out.println();
     }
 
 }
