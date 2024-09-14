@@ -1,8 +1,10 @@
 package mealplanner;
 
-import javax.xml.transform.Result;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.*;
 import java.sql.*;
+import java.io.File;
 
 public class DBManager {
     private final Connection conn;
@@ -43,6 +45,16 @@ public class DBManager {
                 + ")");
 
         statement.close();
+    }
+
+    public boolean planExists() throws SQLException {
+        Statement statement = this.conn.createStatement();
+        ResultSet plannedMeals = statement.executeQuery("SELECT * FROM plan");
+        if (plannedMeals.next()) {
+            return true;
+        }
+
+        return false;
     }
 
     public int getNextId() throws SQLException {
@@ -208,4 +220,29 @@ public class DBManager {
         System.out.println();
     }
 
+    public void createShoppingList(String filename) throws SQLException, RuntimeException, FileNotFoundException {
+        Statement statement = this.conn.createStatement();
+        ResultSet ingredientsList = statement.executeQuery("SELECT ingredients.ingredient, COUNT(ingredients.ingredient) AS numIngredients "
+                                                            + "FROM plan "
+                                                            + "JOIN meals ON plan.meal_id = meals.meal_id "
+                                                            + "JOIN ingredients ON meals.meal_id = ingredients.meal_id "
+                                                            + "GROUP BY ingredients.ingredient");
+
+        File file = new File(filename);
+        PrintWriter pw = new PrintWriter(file);
+
+        while (ingredientsList.next()) {
+            String ingredient = ingredientsList.getString("ingredient");
+            int numIngredient = ingredientsList.getInt("numIngredients");
+            if (numIngredient >= 2) {
+                pw.printf("%s x%d\n", ingredient, numIngredient);
+            } else {
+                pw.println(ingredient);
+            }
+        }
+
+        statement.close();
+        ingredientsList.close();
+        pw.close();
+    }
 }

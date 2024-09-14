@@ -1,5 +1,6 @@
 package mealplanner;
 
+import java.io.FileNotFoundException;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -16,7 +17,7 @@ public class Main {
 
       userLoop: while (true) {
         // Ask user for action
-        System.out.println("What would you like to do (add, show, plan, list plan, exit)?");
+        System.out.println("What would you like to do (add, show, plan, list plan, save, exit)?");
         String action = scanner.nextLine();
 
         switch (action) {
@@ -32,13 +33,16 @@ public class Main {
           case "list plan":
             listPlan();
             break;
+          case "save":
+            saveShoppingList();
+            break;
           case "exit":
             break userLoop;
           default:
             // Restarts due to invalid action input
         }
       }
-    } catch (SQLException e) {
+    } catch (SQLException | FileNotFoundException e) {
       System.out.println(e);
       return;
     }
@@ -130,6 +134,19 @@ public class Main {
     for (String day : days) {
       dbManager.showPlan(day);
     }
+  }
+
+  private static void saveShoppingList() throws SQLException, FileNotFoundException {
+    if (!dbManager.planExists()) {
+      System.out.println("Unable to save. Plan your meals first.");
+      return;
+    }
+
+    System.out.println("Input a filename:");
+    String filename = scanner.nextLine();
+
+    dbManager.createShoppingList(filename);
+    System.out.println("Saved!");
   }
 
   private static boolean isValidCategory(String category) {
